@@ -1,4 +1,4 @@
-"""Parsing, formatting, and chart generation helpers."""
+"""Разбор текста пользователя, форматирование сумм, построение графиков."""
 
 from __future__ import annotations
 
@@ -138,7 +138,7 @@ def build_spending_chart_png(
     fig, ax = plt.subplots(figsize=(7, 4))
     ax.bar(labels_ru, amounts, color="#2d6a4f")
     ax.set_ylabel("Сумма")
-    ax.set_title(f"Расходы по категориям ({days} дн.)")
+    ax.set_title(f"Расходы по категориям — последние {days} дней")
     plt.xticks(rotation=25, ha="right")
     fig.tight_layout()
     fig.savefig(buffer, format="png", bbox_inches="tight", dpi=120)

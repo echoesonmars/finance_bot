@@ -1,5 +1,5 @@
 """
-Personal Finance Bot — Telegram entrypoint and message handlers.
+Точка входа: Telegram-бот, обработка команд, кнопок и сообщений.
 """
 
 from __future__ import annotations
@@ -48,21 +48,21 @@ def _parse_amount(text: str) -> float | None:
 
 def _welcome_text() -> str:
     return (
-        "Привет! Я твой AI-финансист.\n\n"
-        "Что я умею:\n"
-        "— хранить бюджет и операции в SQLite;\n"
-        "— понимать короткие фразы вроде «Такси 200» или «обед 500»;\n"
-        "— давать совет по тратам через GPT;\n"
-        "— строить график расходов;\n"
-        "— принимать фото чека (распознавание через vision, если задан API-ключ).\n\n"
-        "Начни с «Установить бюджет» или просто опиши трату текстом."
+        "Привет! Я помогу спокойно вести учёт: что потратили и что получили.\n\n"
+        "Что умею:\n"
+        "— запомнить, сколько вы готовы потратить, и показывать остаток;\n"
+        "— записывать траты и доходы с кнопок или одной фразой вроде «Такси 200»;\n"
+        "— коротко подсказать, на что обратить внимание в тратах — кнопка «Советы по тратам»;\n"
+        "— показать картинку: как распределились расходы по категориям;\n"
+        "— принять фото чека: постараюсь сам прочитать сумму, вы только подтвердите.\n\n"
+        "Можно начать с «Установить бюджет» или просто написать трату текстом."
     )
 
 
 def _remainder_line(user_id: int) -> str:
     row = database.get_user_row(user_id)
     if not row or row["budget"] is None:
-        return "Бюджет ещё не задан — нажми «Установить бюджет»."
+        return "Лимит ещё не задан — нажмите «Установить бюджет», чтобы я мог считать остаток."
     budget = float(row["budget"])
     spent = database.sum_expenses_all_time(user_id)
     cur = str(row["currency"])
@@ -95,7 +95,7 @@ def cmd_help(message: types.Message) -> None:
 def on_photo(message: types.Message) -> None:
     uid = message.from_user.id
     database.get_or_create_user(uid)
-    bot.reply_to(message, "Получил фото. Сканирую чек…")
+    bot.reply_to(message, "Фото получено, разбираю чек…")
 
     try:
         photo = message.photo[-1]
@@ -242,7 +242,7 @@ def on_text(message: types.Message) -> None:
         )
         return
 
-    if text == keyboards.BTN_GPT_ADVICE:
+    if text == keyboards.BTN_SPENDING_TIPS:
         snap = database.get_balance_snapshot(uid, config.DEFAULT_STATS_DAYS)
         row = database.get_user_row(uid)
         budget = float(row["budget"]) if row and row["budget"] is not None else None
@@ -269,7 +269,7 @@ def on_text(message: types.Message) -> None:
         bot.send_photo(
             message.chat.id,
             buf,
-            caption=f"Расходы по категориям за {config.DEFAULT_STATS_DAYS} дн.",
+            caption=f"Ваши расходы по категориям за последние {config.DEFAULT_STATS_DAYS} дней.",
             reply_markup=keyboards.main_reply_keyboard(),
         )
         return

@@ -1,12 +1,12 @@
-"""Telegram Reply and Inline keyboards for Personal Finance Bot."""
+"""Клавиатуры Telegram: главное меню, категории, подтверждение чека."""
 
 from telebot import types
 
-# --- Reply keyboard labels (must match handler checks in main.py)
+# Подписи кнопок — те же строки проверяются в main.py при обработке текста
 BTN_SET_BUDGET = "Установить бюджет"
 BTN_ADD_EXPENSE = "Добавить расход"
 BTN_ADD_INCOME = "Добавить доход"
-BTN_GPT_ADVICE = "Совет от GPT"
+BTN_SPENDING_TIPS = "Советы по тратам"
 BTN_CHARTS = "Отчёт в графиках"
 BTN_CANCEL = "Отмена"
 
@@ -19,7 +19,7 @@ def main_reply_keyboard() -> types.ReplyKeyboardMarkup:
     )
     kb.add(
         types.KeyboardButton(BTN_ADD_INCOME),
-        types.KeyboardButton(BTN_GPT_ADVICE),
+        types.KeyboardButton(BTN_SPENDING_TIPS),
     )
     kb.add(types.KeyboardButton(BTN_CHARTS))
     return kb

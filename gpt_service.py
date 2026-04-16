@@ -1,4 +1,4 @@
-"""OpenAI integration: financial advice and receipt understanding."""
+"""Интеграция с облачным ИИ: персональные советы и разбор фото чеков (только для разработчика в коде)."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from typing import Any
 from openai import OpenAI
 
 import config
+import keyboards
 
 logger = logging.getLogger(__name__)
 
@@ -27,16 +28,22 @@ def _get_client() -> OpenAI:
     return _client
 
 
+def _category_ru(cat_key: str, tx_type: str) -> str:
+    if tx_type == "income":
+        return keyboards.INCOME_CATEGORIES.get(cat_key, cat_key)
+    return keyboards.EXPENSE_CATEGORIES.get(cat_key, cat_key)
+
+
 def get_financial_advice(user_data: dict[str, Any]) -> str:
     """
-    Produce a short personalized advice text in Russian from aggregated stats.
-    user_data keys: period_days, currency, budget, total_expense, total_income,
-    remaining, expenses_by_category (dict str->float), recent_notes (optional list).
+    Короткий персональный совет на русском по агрегированной статистике.
+    user_data: period_days, currency, budget, total_expense, total_income,
+    remaining, expenses_by_category, recent_transactions.
     """
     if not config.OPENAI_API_KEY:
         return (
-            "Советы GPT недоступны: не задан OPENAI_API_KEY в .env. "
-            "Добавь ключ и перезапусти бота."
+            "Персональные подсказки сейчас недоступны. "
+            "Запись трат, доходов, лимит и графики по-прежнему работают."
         )
 
     period = int(user_data.get("period_days", 7))
@@ -49,24 +56,28 @@ def get_financial_advice(user_data: dict[str, Any]) -> str:
     recent = user_data.get("recent_transactions") or []
 
     stats_lines = [
-        f"Период анализа: последние {period} дней.",
-        f"Валюта отображения: {currency}.",
-        f"Суммарные расходы за период: {total_expense:.2f}.",
-        f"Суммарные доходы за период: {total_income:.2f}.",
+        f"Период: последние {period} дней.",
+        f"Валюта: {currency}.",
+        f"Расходы за период: {total_expense:.2f}.",
+        f"Доходы за период: {total_income:.2f}.",
     ]
     if budget is not None:
-        stats_lines.append(f"Установленный бюджет (на период учёта расходов): {float(budget):.2f}.")
+        stats_lines.append(f"Заданный лимит (бюджет): {float(budget):.2f}.")
     if remaining is not None:
-        stats_lines.append(f"Остаток относительно бюджета (бюджет минус расходы за период): {float(remaining):.2f}.")
+        stats_lines.append(
+            f"Остаток от лимита (лимит минус все учтённые траты): {float(remaining):.2f}."
+        )
     if by_cat:
         stats_lines.append("Расходы по категориям:")
         for k, v in sorted(by_cat.items(), key=lambda x: -x[1]):
-            stats_lines.append(f"  - {k}: {v:.2f}")
+            stats_lines.append(f"  - {_category_ru(k, 'expense')}: {v:.2f}")
     if recent:
-        stats_lines.append("Последние операции (кратко):")
+        stats_lines.append("Последние операции:")
         for t in recent[:8]:
+            ttype = t.get("type", "")
+            cat = _category_ru(str(t.get("category", "")), str(ttype))
             stats_lines.append(
-                f"  - {t.get('type')} {t.get('amount')} {t.get('category')} {t.get('created_at', '')[:10]}"
+                f"  - {ttype} {t.get('amount')} {cat} ({t.get('created_at', '')[:10]})"
             )
 
     user_content = "\n".join(stats_lines)
@@ -75,7 +86,8 @@ def get_financial_advice(user_data: dict[str, Any]) -> str:
         "Ты опытный личный финансовый советник. Пиши по-русски, кратко (до 1200 символов), "
         "2–5 абзацев. Используй ТОЛЬКО цифры и факты из предоставленной статистики; "
         "не выдумывай траты или доходы. Дай персональные рекомендации: что сократить, "
-        "на что обратить внимание, как улучшить остаток. Без markdown-заголовков #."
+        "на что обратить внимание, как улучшить остаток. Без markdown-заголовков #. "
+        "Не упоминай названия моделей, API и разработческие термины — пиши для обычного человека."
     )
 
     try:
@@ -90,16 +102,15 @@ def get_financial_advice(user_data: dict[str, Any]) -> str:
             temperature=0.6,
         )
         choice = resp.choices[0].message.content
-        return (choice or "").strip() or "Пустой ответ от модели. Попробуйте позже."
+        return (choice or "").strip() or "Ассистент не вернул текст. Попробуйте чуть позже."
     except Exception as exc:  # noqa: BLE001
-        logger.exception("OpenAI advice failed: %s", exc)
-        return "Не удалось получить совет от GPT (ошибка API). Попробуйте позже."
+        logger.exception("Advice request failed: %s", exc)
+        return "Сейчас не удалось получить ответ ассистента. Попробуйте позже."
 
 
 def parse_receipt_image(image_bytes: bytes, mime: str = "image/jpeg") -> dict[str, Any] | None:
     """
-    Use vision model to extract amount and category from a receipt photo.
-    Returns dict with keys: amount (float), category_key (str), merchant (str optional).
+    По байтам изображения чека извлекает сумму и категорию (внутренние ключи категорий).
     """
     if not config.OPENAI_API_KEY:
         return None
@@ -151,5 +162,5 @@ def parse_receipt_image(image_bytes: bytes, mime: str = "image/jpeg") -> dict[st
         merchant = data.get("merchant")
         return {"amount": amount, "category_key": cat, "merchant": merchant}
     except Exception as exc:  # noqa: BLE001
-        logger.exception("OpenAI receipt parse failed: %s", exc)
+        logger.exception("Receipt parse failed: %s", exc)
         return None

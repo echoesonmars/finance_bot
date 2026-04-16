@@ -1,4 +1,4 @@
-"""Load configuration from environment variables."""
+"""Загрузка настроек из переменных окружения и файла .env."""
 
 import os
 from pathlib import Path
@@ -13,8 +13,8 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
 
-# SQLite database file path
+# Путь к файлу базы данных приложения
 DATABASE_PATH = str(ROOT_DIR / "finance_bot.db")
 
-# Default reporting period for charts and GPT context (days)
+# Сколько дней учитывать в графиках и в сводке для «Советы по тратам»
 DEFAULT_STATS_DAYS = 7

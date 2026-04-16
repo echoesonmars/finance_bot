@@ -1,4 +1,4 @@
-"""SQLite persistence for users and transactions."""
+"""Локальное хранение пользователей и операций (файл базы на диске)."""
 
 from __future__ import annotations
 
